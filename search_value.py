@@ -2,14 +2,18 @@
 
 from __future__ import unicode_literals
 
-import urllib2
+# import urllib2
+import urllib.request as urllib2
 import time
-import html5lib
+# import html5lib
+from functools import reduce
+
 from bs4 import BeautifulSoup
 
 
 class ItemInfo(object):
     """종목의 각종 데이터 : 가격, 가치 정보 등"""
+
     def __init__(self):
         self.value = False, -100.0  # 가치 기본 값. (대상여부, 가치 수치)
 
@@ -22,29 +26,31 @@ class SettleInfo(object):
 def get_item_list_pages():
     list_pages = []
     url = 'http://finance.naver.com/sise/sise_market_sum.nhn?sosok=%d&page=%d'
-    for market in xrange(0, 2):  # for test (0, 2)
-        for page in xrange(1, 30):  # for test (1,30)
+    for market in range(0, 2):  # for test (0, 2)
+        for page in range(1, 30):  # for test (1,30)
             try:
                 list_pages.append(urllib2.urlopen(url % (market, page)).read())
                 time.sleep(0.5)
             except Exception as e:
-                print '[ERROR] GetItemListPages : market({}), page({})'.format(market, page)
+                print('[ERROR] GetItemListPages : market({}), page({})'.format(market, page))
                 raise e
     return list_pages
 
 
 def get_items_in_page(page):
-    bs = BeautifulSoup(page, 'html5lib')
+    # bs = BeautifulSoup(page, 'html5lib')
+    bs = BeautifulSoup(page, 'lxml')
     trs = bs.body.find('div', id='wrap').find('div', id='newarea').find('div', id='contentarea').find(
-        'div', class_='box_type_l').find('table', class_='type_2').tbody.find_all('tr')
+            'div', class_='box_type_l').find('table', class_='type_2').tbody.find_all('tr')
     return map(get_item_from_tr, trs)
 
 
 def get_item_basics_in_page(page):
-    bs = BeautifulSoup(page, 'html5lib')
+    # bs = BeautifulSoup(page, 'html5lib')
+    bs = BeautifulSoup(page, 'lxml')
     trs = bs.body.find('div', id='wrap').find('div', id='newarea').find('div', id='contentarea').find(
-        'div', class_='box_type_l').find('table', class_='type_2').tbody.find_all('tr')
-    datas = [('P', tr) for tr in trs]
+            'div', class_='box_type_l').find('table', class_='type_2').tbody.find_all('tr')
+    # data = [('P', tr) for tr in trs]
     return map(get_item_from_tr, trs)
 
 
@@ -65,20 +71,20 @@ def get_item_basic_from_tr(tr):
         item.number_of_stocks = int(tds[7].string.replace(',', '').strip())
         # item.foreign_rate = float(tds[8].string.replace(',', '').strip())
         # item.volume = int(tds[9].string.replace(',', '').strip())
-#         try:
-#             item.per = float(tds[10].string.strip().replace(',', ''))
-#         except:
-#             item.per = None
-#             #print item.name, item.code, 'per parse error'
-#         try:
-#             item.roe = float(tds[11].string.strip().replace(',', ''))
-#         except:
-#             item.roe = None
-#             #print item.name, item.code, 'roe parse error'
+        #         try:
+        #             item.per = float(tds[10].string.strip().replace(',', ''))
+        #         except:
+        #             item.per = None
+        #             #print item.name, item.code, 'per parse error'
+        #         try:
+        #             item.roe = float(tds[11].string.strip().replace(',', ''))
+        #         except:
+        #             item.roe = None
+        #             #print item.name, item.code, 'roe parse error'
 
         return item
     except Exception as e:
-        print 'ERROR: get item basic from tr failed:', e
+        print('ERROR: get item basic from tr failed:', e)
         return None
 
 
@@ -91,7 +97,7 @@ def get_item_from_tr(tr):
         item = ItemInfo()
         item.code = tds[1].a['href'][-6:].strip()
         name = tds[1].a.string.strip()
-        print type(name), name
+        print(type(name), name)
         item.name = tds[1].a.string.strip()  # .encode('utf8')
         try:
             item.price = int(tds[2].string.replace(',', '').strip())
@@ -106,18 +112,18 @@ def get_item_from_tr(tr):
                 item.per = float(tds[10].string.strip().replace(',', ''))
             except Exception as e:
                 item.per = None
-                print 'ERROR: get item basic per failed:', e, ':', item.code, item.name
+                print('ERROR: get item basic per failed:', e, ':', item.code, item.name)
             try:
                 item.roe = float(tds[11].string.strip().replace(',', ''))
             except Exception as e:
                 item.roe = None
-                print 'ERROR: get item basic roe failed:', e, ':', item.code, item.name
+                print('ERROR: get item basic roe failed:', e, ':', item.code, item.name)
 
             return item
         except Exception as e:
-            print 'ERROR: get item basic failed:', e, ':', item.code, item.name
+            print('ERROR: get item basic failed:', e, ':', item.code, item.name)
     except Exception as e:
-        print 'ERROR: get item basic failed:', e
+        print('ERROR: get item basic failed:', e)
 
     return None
 
@@ -134,27 +140,31 @@ def get_item_analysis():
     items = get_item_basics()
     for item in items:
         get_itooza_item_info(item)
-        print 'itooza analysis completed : {}, {}'.format(item.name, item.code)
+        print('itooza analysis completed : {}, {}'.format(item.name, item.code))
 
     return items
 
 
 def get_itooza_item_info(item):
+    # bs = BeautifulSoup(
+    #         urllib2.urlopen(
+    #                 'http://search.itooza.com/index.htm?seName=%s&x=17&y=13' % item.code).read(), 'html5lib')
     bs = BeautifulSoup(
-        urllib2.urlopen(
-            'http://search.itooza.com/index.htm?seName=%s&x=17&y=13' % item.code).read(), 'html5lib')
+            urllib2.urlopen(
+                    'http://search.itooza.com/index.htm?seName=%s&x=17&y=13' % item.code).read(), 'lxml')
+
     table_name_list = ['indexTable1', 'indexTable2', 'indexTable3']
     index_table = bs.body.find('div', id='wrap').find('div', id='container').find('div', id='indexTable')
     if index_table:
         try:
             item.settle_month = int(filter(lambda x: x.isdigit(), bs.body.find(
-                'div', id='wrap').find('div', id='container').find('div', id='content').find(
-                'div', id='stockItem').find('div', {'class': 'item-body'}).find('div', {'class': 'ar'}).find(
-                'div', {'class': 'item-detail'}).find('div', {'class': 'detail-data'}).ul.find(
-                'li', {'class': 'i-12'}).span.string.strip()))
+                    'div', id='wrap').find('div', id='container').find('div', id='content').find(
+                    'div', id='stockItem').find('div', {'class': 'item-body'}).find('div', {'class': 'ar'}).find(
+                    'div', {'class': 'item-detail'}).find('div', {'class': 'detail-data'}).ul.find(
+                    'li', {'class': 'i-12'}).span.string.strip()))
         except Exception as e:
             item.settle_month = None
-            print 'ERROR: get settle month failed:', e, ':', item.code, item.name
+            print('ERROR: get settle month failed:', e, ':', item.code, item.name)
         item.settle_info = []  # 결산기별 데이터, 0 - 연환산, 1 - 연간, 2 - 분기별
         for each_table in table_name_list:
             table = index_table.find('div', id=each_table).table
@@ -172,7 +182,7 @@ def get_itooza_item_table(target_table, bs_table):
                 settle_info.settle_period = (int(period[0]), int(period[1][:2]))
             except Exception as e:
                 settle_info.settle_period = None
-                print 'ERROR: get year/month failed:', e
+                print('ERROR: get year/month failed:', e)
 
             settle_info_list.append(settle_info)
 
@@ -186,7 +196,7 @@ def get_itooza_item_table(target_table, bs_table):
                 settle_info_list[index].eps_cont = int(each.string.strip().replace(',', ''))
             except Exception as e:
                 settle_info_list[index].eps_cont = None
-                print 'ERROR: get eps failed:', e
+                print('ERROR: get eps failed:', e)
         td_index += 1
 
         # eps, 개별
@@ -195,7 +205,7 @@ def get_itooza_item_table(target_table, bs_table):
                 settle_info_list[index].eps_isol = int(each.string.strip().replace(',', ''))
             except Exception as e:
                 settle_info_list[index].eps_isol = None
-                print 'ERROR: get eps failed:', e
+                print('ERROR: get eps failed:', e)
         td_index += 1
 
         # PER
@@ -204,7 +214,7 @@ def get_itooza_item_table(target_table, bs_table):
                 settle_info_list[index].per = float(each.string.strip().replace(',', ''))
             except Exception as e:
                 settle_info_list[index].per = None
-                print 'ERROR: get per failed:', e
+                print('ERROR: get per failed:', e)
         td_index += 1
 
         for index, each in enumerate(datas[td_index].find_all('td')):
@@ -212,7 +222,7 @@ def get_itooza_item_table(target_table, bs_table):
                 settle_info_list[index].capital = int(each.string.strip().replace(',', ''))
             except Exception as e:
                 settle_info_list[index].capital = None
-                print 'ERROR: get capital failed:', e
+                print('ERROR: get capital failed:', e)
         td_index += 1
 
         for index, each in enumerate(datas[td_index].find_all('td')):
@@ -220,7 +230,7 @@ def get_itooza_item_table(target_table, bs_table):
                 settle_info_list[index].pbr = float(each.string.strip().replace(',', ''))
             except Exception as e:
                 settle_info_list[index].pbr = None
-                print 'ERROR: get pbr failed:', e
+                print('ERROR: get pbr failed:', e)
         td_index += 1
 
         # 배당
@@ -229,7 +239,7 @@ def get_itooza_item_table(target_table, bs_table):
                 settle_info_list[index].div = int(each.string.strip().replace(',', ''))
             except Exception as e:
                 settle_info_list[index].div = 0
-                print 'ERROR: get div failed:', e
+                print('ERROR: get div failed:', e)
         td_index += 1
 
         # 시가배당률
@@ -238,7 +248,7 @@ def get_itooza_item_table(target_table, bs_table):
                 settle_info_list[index].div_rate = float(each.string.strip().replace(',', ''))
             except Exception as e:
                 settle_info_list[index].div_rate = None
-                print 'ERROR: get div rate failed:', e
+                print('ERROR: get div rate failed:', e)
         td_index += 1
 
         # ROE
@@ -247,7 +257,7 @@ def get_itooza_item_table(target_table, bs_table):
                 settle_info_list[index].roe = float(each.string.strip().replace(',', ''))
             except Exception as e:
                 settle_info_list[index].roe = None
-                print 'ERROR: get roe failed:', e
+                print('ERROR: get roe failed:', e)
         td_index += 1
 
         # 순이익률
@@ -256,7 +266,7 @@ def get_itooza_item_table(target_table, bs_table):
                 settle_info_list[index].profit_rate = float(each.string.strip().replace(',', ''))
             except Exception as e:
                 settle_info_list[index].profit_rate = None
-                print 'ERROR: get profit rate failed:', e
+                print('ERROR: get profit rate failed:', e)
         td_index += 1
 
         # 영업이익률
@@ -265,12 +275,12 @@ def get_itooza_item_table(target_table, bs_table):
                 settle_info_list[index].biz_profit_rate = float(each.string.strip().replace(',', ''))
             except Exception as e:
                 settle_info_list[index].biz_profit_rate = None
-                print 'ERROR: get biz profit failed:', e
+                print('ERROR: get biz profit failed:', e)
         td_index += 1
 
         target_table.append(settle_info_list)
     except Exception as e:
-        print 'ERROR: get itooza item info failed:', e
+        print('ERROR: get itooza item info failed:', e)
 
 
 def calculate_value(item):
@@ -329,37 +339,37 @@ def calculate_value_by_div(item):
 
 
 def analysis(*evaluate_funcs):
-    print 'analysis start : time {}'.format(time.time())
+    print('analysis start : time {}'.format(time.time()))
 
-    items = get_item_analysis()
-    print 'GetItemAnalysis completed : time {}, item count {}'.format(time.time(), len(items))
+    items = [x for x in get_item_analysis()]
+    print('GetItemAnalysis completed : time {}, item count {}'.format(time.time(), len(items)))
 
     for func in evaluate_funcs:
-        print '-'*10
-        print 'value function : ', func
+        print('-' * 10)
+        print('value function : ', func)
         for item in items:
             try:
                 item.value = func(item)
             except Exception as e:
                 item.value = False, 0.0
-                print 'ERROR: calculate value failed:', e, ':', item.code, ',', item.name
-        print 'calculate value completed : time {}'.format(time.time())
+                print('ERROR: calculate value failed:', e, ':', item.code, ',', item.name)
+        print('calculate value completed : time {}'.format(time.time()))
 
         # items = filter(lambda x : x.value[0], items)
         items.sort(key=lambda x: x.value[1], reverse=True)
-        print 'sort completed : time {}'.format(time.time())
-        print '-' * 80
+        print('sort completed : time {}'.format(time.time()))
+        print('-' * 80)
 
         for item in items:
             try:
                 if item.value[0]:
-                    print ','.join(map(lambda x: unicode(x), (
+                    print(','.join(map(lambda x: x, (
                         item.name, item.code, item.value[1], item.price, item.market_capital,
-                        item.par_value)))
+                        item.par_value))))
             except Exception as e:
                 if item.value[0]:
-                    print ','.join(map(lambda x: unicode(x), (
-                        '', item.code, item.value[1], item.price, item.market_capital, item.par_value)))
+                    print(','.join(map(lambda x: x, (
+                        '', item.code, item.value[1], item.price, item.market_capital, item.par_value))))
 
 
 def main():
