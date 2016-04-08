@@ -10,6 +10,9 @@ from functools import reduce
 
 from bs4 import BeautifulSoup
 
+market_range = range(2)
+page_range = range(1, 30)
+
 
 class ItemInfo(object):
     """종목의 각종 데이터 : 가격, 가치 정보 등"""
@@ -26,8 +29,8 @@ class SettleInfo(object):
 def get_item_list_pages():
     list_pages = []
     url = 'http://finance.naver.com/sise/sise_market_sum.nhn?sosok=%d&page=%d'
-    for market in range(0, 2):  # for test (0, 2)
-        for page in range(1, 30):  # for test (1,30)
+    for market in market_range:  # for test (0, 2)
+        for page in page_range:  # for test (1,30)
             try:
                 list_pages.append(urllib2.urlopen(url % (market, page)).read())
                 time.sleep(0.5)
@@ -132,7 +135,7 @@ def get_item_basics():
     items = []
     for page in get_item_list_pages():
         items.extend(get_items_in_page(page))
-    items = filter(None, items)
+    items = [x for x in filter(None, items)]
     return items
 
 
@@ -157,11 +160,8 @@ def get_itooza_item_info(item):
     index_table = bs.body.find('div', id='wrap').find('div', id='container').find('div', id='indexTable')
     if index_table:
         try:
-            item.settle_month = int(filter(lambda x: x.isdigit(), bs.body.find(
-                    'div', id='wrap').find('div', id='container').find('div', id='content').find(
-                    'div', id='stockItem').find('div', {'class': 'item-body'}).find('div', {'class': 'ar'}).find(
-                    'div', {'class': 'item-detail'}).find('div', {'class': 'detail-data'}).ul.find(
-                    'li', {'class': 'i-12'}).span.string.strip()))
+            settle_month = [(c if c.isdigit() else '_') for c in bs.body.find('div', id='wrap').find('div', id='container').find('div', id='content').find('div', id='stockItem').find('div', {'class': 'item-body'}).find('div', {'class': 'ar'}).find('div', {'class': 'item-detail'}).find('div', {'class': 'detail-data'}).ul.find('li', {'class': 'i-12'}).span.string.strip()]
+            item.settle_month = int(''.join(settle_month[0: settle_month.index('_')]))
         except Exception as e:
             item.settle_month = None
             print('ERROR: get settle month failed:', e, ':', item.code, item.name)
@@ -368,13 +368,26 @@ def analysis(*evaluate_funcs):
                         item.par_value))))
             except Exception as e:
                 if item.value[0]:
-                    print(','.join(map(lambda x: x, (
+                    print(','.join(map(lambda x: str(x), (
                         '', item.code, item.value[1], item.price, item.market_capital, item.par_value))))
+                    # print(','.join(map(lambda x: x, (
+                    #     '', item.code, item.value[1], item.price, item.market_capital, item.par_value))))
+
+    return items
 
 
 def main():
-    analysis(calculate_value_by_div, calculate_value)
+    return analysis(calculate_value_by_div, calculate_value)
 
+
+def test():
+    global market_range
+    global page_range
+
+    market_range = range(1)
+    page_range = range(1, 2)
+
+    return main()
 
 if __name__ == '__main__':
     main()
