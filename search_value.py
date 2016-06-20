@@ -363,9 +363,11 @@ def analysis(*evaluate_funcs):
         for item in items:
             try:
                 if item.value[0]:
-                    print(','.join(map(lambda x: x, (
-                        item.name, item.code, item.value[1], item.price, item.market_capital,
-                        item.par_value))))
+                    # print(','.join(map(lambda x: x, (
+                    print(','.join(map(lambda x: str(x), (
+                        item.name, item.code, item.value[1], item.price, item.market_capital, item.par_value))))
+                        # item.name, item.code, item.value[1], item.price, item.market_capital,
+                        # item.par_value))))
             except Exception as e:
                 if item.value[0]:
                     print(','.join(map(lambda x: str(x), (
@@ -378,6 +380,23 @@ def analysis(*evaluate_funcs):
 
 def main():
     return analysis(calculate_value_by_div, calculate_value)
+
+
+def print_analysis_result(items):
+    for item in items:
+        try:
+            if item.value[0]:
+                # print(','.join(map(lambda x: x, (
+                print(','.join(map(lambda x: str(x), (
+                    item.name, item.code, item.value[1], item.price, item.market_capital, item.par_value))))
+                    # item.name, item.code, item.value[1], item.price, item.market_capital,
+                    # item.par_value))))
+        except Exception as e:
+            if item.value[0]:
+                print(','.join(map(lambda x: str(x), (
+                    '', item.code, item.value[1], item.price, item.market_capital, item.par_value))))
+                # print(','.join(map(lambda x: x, (
+                #     '', item.code, item.value[1], item.price, item.market_capital, item.par_value))))
 
 
 def test():
