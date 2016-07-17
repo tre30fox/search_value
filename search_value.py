@@ -1,7 +1,5 @@
 # coding=utf8
 
-from __future__ import unicode_literals
-
 # import urllib2
 import urllib.request as urllib2
 import time
@@ -409,4 +407,5 @@ def test():
     return main()
 
 if __name__ == '__main__':
-    main()
+    test()
+    # main()
