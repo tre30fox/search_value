@@ -139,11 +139,15 @@ def get_item_basics():
 
 def get_item_analysis():
     items = get_item_basics()
+    excepts = []
     for item in items:
-        get_itooza_item_info(item)
-        print('itooza analysis completed : {}, {}'.format(item.name, item.code))
+        try:
+            get_itooza_item_info(item)
+            print('itooza analysis completed : {}, {}'.format(item.name, item.code))
+        except:
+            excepts.append(item.code)
 
-    return items
+    return [item for item in items if item.code not in excepts], excepts
 
 
 def get_itooza_item_info(item):
@@ -339,8 +343,9 @@ def calculate_value_by_div(item):
 def analysis(*evaluate_funcs):
     print('analysis start : time {}'.format(time.time()))
 
-    items = [x for x in get_item_analysis()]
+    items, excepts = get_item_analysis()
     print('GetItemAnalysis completed : time {}, item count {}'.format(time.time(), len(items)))
+    print('excepts:', '\n'.join(excepts))
 
     for func in evaluate_funcs:
         print('-' * 10)
@@ -364,14 +369,10 @@ def analysis(*evaluate_funcs):
                     # print(','.join(map(lambda x: x, (
                     print(','.join(map(lambda x: str(x), (
                         item.name, item.code, item.value[1], item.price, item.market_capital, item.par_value))))
-                        # item.name, item.code, item.value[1], item.price, item.market_capital,
-                        # item.par_value))))
             except Exception as e:
                 if item.value[0]:
                     print(','.join(map(lambda x: str(x), (
                         '', item.code, item.value[1], item.price, item.market_capital, item.par_value))))
-                    # print(','.join(map(lambda x: x, (
-                    #     '', item.code, item.value[1], item.price, item.market_capital, item.par_value))))
 
     return items
 
