@@ -3,16 +3,29 @@
 import time
 from urllib import request
 from bs4 import BeautifulSoup
-from config import *
+import config as conf
 from logger import logger
 
 
-class ItemCurrent():
+class ExceptionNoCode(Exception):
+    pass
+
+
+class ExceptionParseError(Exception):
+    pass
+
+
+class ItemCurrent:
     def __init__(self, tds):
-        if len(tds) < 10:
-            raise Exception('column count is too low: {}'.format(len(tds)))
+        if len(tds) < 2:
+            raise ExceptionNoCode('no code: {}'.format(len(tds)))
 
         self.code = tds[1].a['href'][-6:].strip()
+
+        if len(tds) < 10:
+            raise ExceptionParseError(
+                'column count is too low: code:{}, error: {}'.format(self.code, len(tds)))
+
         self.name = tds[1].a.string.strip()
         self.price = int(tds[2].string.replace(',', '').strip())
         self.change = int(tds[3].span.string.strip().replace(',', ''))
@@ -34,7 +47,35 @@ class ItemCurrent():
             logger.error('roe parse error:{}, {}'.format(self.code, self.name))
 
 
-class StockCurrentCollector():
+class NaverItemCurrentPage:
+    """
+    네이버에서 가져온 시가총액 페이지로부터 종목 정보를 추출/반환
+    """
+    def __init__(self, page):
+        """
+        :param page: 읽어온 웹페이지. bs4 read stream
+        """
+        self.bs = BeautifulSoup(page, 'lxml')
+
+    def iteritems(self):
+        """
+        웹페이지에서 한 row 마다 한 종목씩의 정보를 파싱에서 반환한다.
+        :return: generator of ItemCurrent
+        """
+        for tr in self.bs.body.find('div', id='wrap').find('div', id='newarea').find(
+            'div', id='contentarea').find('div', class_='box_type_l').find(
+                'table', class_='type_2').tbody.find_all('tr'):
+            try:
+                yield ItemCurrent(tr.find_all('td'))
+            except ExceptionNoCode:
+                continue
+            except ExceptionParseError as e:
+                logger.error('get item basic from tr failed: Parse Error: {}'.format(e))
+            except Exception as e:
+                logger.error('get item basic from tr failed: Unknown: {}'.format(e))
+
+
+class StockCurrentCollector:
     """
     네이버 시총 상위 종목 리스트 페이지를 조회하여 종목별 현재가 정보를 수집한다
     """
@@ -46,7 +87,7 @@ class StockCurrentCollector():
         네이버에서 종목별 현재가 정보를 가져와 db 에 저장한다.
         """
         for item in self.get_items():
-            logger.info(item.code)
+            logger.info(', '.join(map(str, (item.code, item.name, item.price, item.per, item.roe))))
             # save
 
     def get_items(self):
@@ -56,7 +97,7 @@ class StockCurrentCollector():
         return: generator of ItemCurrent
         """
         for page in self.get_pages():
-            for item in self.get_items_from_page(page):
+            for item in page.iteritems():
                 yield item
 
     def get_pages(self):
@@ -65,38 +106,23 @@ class StockCurrentCollector():
 
         return: generator of str
         """
-        for market in markets_for_current:
-            for page in pages_for_current:
+        for market in range(*conf.markets_for_current):
+            for page in range(*conf.pages_for_current):
                 try:
-                    yield request.urlopen(
-                        self.__class__.url.format(market, page)).read()
+                    yield NaverItemCurrentPage(request.urlopen(
+                        self.__class__.url.format(market, page)).read())
 
-                    time.sleep(request_interval)
+                    time.sleep(conf.request_interval)
                 except Exception as e:
                     logger.error('fail to read stock current')
                     raise e
 
-    def get_items_from_page(self, page):
-        """
-        네이버에서 가져온 웹페이지로 부터 종목 정보를 추출/반환
-
-        return: generator of ItemCurrent
-        """
-        bs = BeautifulSoup(page, 'lxml')
-
-        for tr in bs.body.find('div', id='wrap').find('div', id='newarea').find(
-            'div', id='contentarea').find('div', class_='box_type_l').find(
-                'table', class_='type_2').tbody.find_all('tr'):
-            try:
-                yield ItemCurrent(tr.find_all('td'))
-            except Exception as e:
-                logger.error('get item basic from tr failed: {}'.format(e))
-
 
 def test():
     collector = StockCurrentCollector()
+    collector.do()
 
-    logger.info(str(collector.do()))
+    # logger.info(str(collector.do()))
 
 
 if __name__ == '__main__':
