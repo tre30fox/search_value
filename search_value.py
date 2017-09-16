@@ -39,8 +39,8 @@ def get_item_list_pages():
 
 
 def get_items_in_page(page):
-    # bs = BeautifulSoup(page, 'html5lib')
-    bs = BeautifulSoup(page, 'lxml')
+    bs = BeautifulSoup(page, 'html5lib')
+    # bs = BeautifulSoup(page, 'lxml')
     trs = bs.body.find('div', id='wrap').find('div', id='newarea').find('div', id='contentarea').find(
             'div', class_='box_type_l').find('table', class_='type_2').tbody.find_all('tr')
     return map(get_item_from_tr, trs)
@@ -94,7 +94,7 @@ def get_item_from_tr(tr):
         col_count_min = 10
         tds = tr.find_all('td')
         if len(tds) < col_count_min:
-            raise Exception('column count is below %d : %d' % (col_count_min, len(tds)))
+            return None
         item = ItemInfo()
         item.code = tds[1].a['href'][-6:].strip()
         name = tds[1].a.string.strip()
@@ -156,10 +156,10 @@ def get_itooza_item_info(item):
     #                 'http://search.itooza.com/index.htm?seName=%s&x=17&y=13' % item.code).read(), 'html5lib')
     bs = BeautifulSoup(
             urllib2.urlopen(
-                    'http://search.itooza.com/index.htm?seName=%s&x=17&y=13' % item.code).read(), 'lxml')
+                    'http://search.itooza.com/index.htm?seName=%s&x=17&y=13' % item.code).read(), 'html5lib')
 
     table_name_list = ['indexTable1', 'indexTable2', 'indexTable3']
-    index_table = bs.body.find('div', id='wrap').find('div', id='container').find('div', id='indexTable')
+    index_table = bs.body.find('div', id='wrap').find('div', id='container').find('div', id='content').find('div', id='indexTable')
     if index_table:
         try:
             settle_month = [(c if c.isdigit() else '_') for c in bs.body.find('div', id='wrap').find('div', id='container').find('div', id='content').find('div', id='stockItem').find('div', {'class': 'item-body'}).find('div', {'class': 'ar'}).find('div', {'class': 'item-detail'}).find('div', {'class': 'detail-data'}).ul.find('li', {'class': 'i-12'}).span.string.strip()]
